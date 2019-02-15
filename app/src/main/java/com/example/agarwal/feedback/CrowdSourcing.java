@@ -15,6 +15,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 import java.util.*;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -53,7 +54,10 @@ public class CrowdSourcing extends AppCompatActivity {
         setContentView(R.layout.activity_crowd_sourcing);
         btn = findViewById(R.id.Post);
         editText = (EditText) findViewById(R.id.Descp);
-        Description = editText.getText().toString();
+
+        final TextView textView = findViewById(R.id.Label);
+
+
         list = findViewById(R.id.TypeOfIncidence);
 
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
@@ -67,7 +71,7 @@ public class CrowdSourcing extends AppCompatActivity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Incidence = TypeOfIncidents[(int) id];
 
-                Toast.makeText(CrowdSourcing.this, Incidence, Toast.LENGTH_SHORT).show();
+               // Toast.makeText(CrowdSourcing.this, Incidence, Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -84,56 +88,33 @@ public class CrowdSourcing extends AppCompatActivity {
        btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                Post();
-               /* Toast.makeText(CrowdSourcing.this, "hello", Toast.LENGTH_SHORT).show();
-                if (Incidence != null && location != null) {
+                if (Incidence != null) {
                     Map<String, Object> values = new HashMap<>();
-                    values.put("Incidence" , Incidence);
-                    values.put("Lat" , location.getLatitude());
-                    values.put("Lng" , location.getLongitude());
-
-                    if(Description != null){
-                        values.put("Desc" , Description);
+                    values.put("Incidence", Incidence);
+                    if (location != null) {
+                        values.put("Lat", location.getLatitude());
+                        values.put("Lng", location.getLongitude());
+                    } else {
+                        // Toast.makeText(this, "Location empty", Toast.LENGTH_SHORT).show();
                     }
 
-                    db.collection("users")
-                            .add(values)
-                            .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                                @Override
-                                public void onSuccess(DocumentReference documentReference) {
-                                    Toast.makeText(CrowdSourcing.this, "Successfull", Toast.LENGTH_SHORT).show();
-                                }
-                            })
-                            .addOnFailureListener(new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    Toast.makeText(CrowdSourcing.this, "Unsuccessful", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                }*/
+                    Description = editText.getText().toString();
+
+                    if (Description != null) {
+                        values.put("Desc", Description);
+                        textView.setText(Description);
+                    }
+                    Post(values);
+                }
+
             }
         });
 
-    }
-
-    public void Post() {
-
-        if (Incidence != null ) {
-            Map<String, Object> values = new HashMap<>();
-            values.put("Incidence", Incidence);
-            if(location != null) {
-                values.put("Lat", location.getLatitude());
-                values.put("Lng", location.getLongitude());
-            }else{
-                Toast.makeText(this, "Location empty", Toast.LENGTH_SHORT).show();
-            }
-            if (Description != null) {
-                values.put("Desc", Description);
-            }
+       }
 
 
-            db.collection("users")
+    public void Post(Map<String, Object> values) {
+          /*  db.collection("users")
                     .document("1").set(values)
                     .addOnSuccessListener(new OnSuccessListener<Void>() {
                         @Override
@@ -146,7 +127,7 @@ public class CrowdSourcing extends AppCompatActivity {
                 public void onFailure(@NonNull Exception e) {
                     Toast.makeText(CrowdSourcing.this, "failed", Toast.LENGTH_SHORT).show();
                 }
-            });
+            }); */
 
             db.collection("users")
                     .add(values)
@@ -163,7 +144,7 @@ public class CrowdSourcing extends AppCompatActivity {
                         }
                     });
         }
-    }
+
 
     private void getDeviceLocation() {
         /*
