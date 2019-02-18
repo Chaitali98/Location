@@ -38,7 +38,7 @@ public class Login extends AppCompatActivity {
 
     private void updateUI(FirebaseUser currentUser) {
         if(currentUser != null)
-                 startActivity(new Intent(Login.this, CrowdSourcing.class));
+                 startActivity(new Intent(Login.this, MapsActivity.class));
       /*  else
             Toast.makeText(this, "Please Try again", Toast.LENGTH_SHORT).show();*/
     }

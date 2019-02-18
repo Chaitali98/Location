@@ -130,7 +130,7 @@ public class CrowdSourcing extends AppCompatActivity {
 
         if(!GpsOn)
             LocationRequest();
-        requestLocationUpdates();
+        //requestLocationUpdates();
     }
 
     public void Post(Map<String, Object> values) {
@@ -282,7 +282,7 @@ public class CrowdSourcing extends AppCompatActivity {
 
     }
 
-    private void requestLocationUpdates() {
+  /*  private void requestLocationUpdates() {
 
         if(!GpsOn)
             LocationRequest();
@@ -312,6 +312,6 @@ public class CrowdSourcing extends AppCompatActivity {
                 }
             }, null);
         }
-    }
+    }*/
 
 }

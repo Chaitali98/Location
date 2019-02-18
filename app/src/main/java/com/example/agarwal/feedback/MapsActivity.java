@@ -2,21 +2,19 @@ package com.example.agarwal.feedback;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.ListActivity;
-import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.CheckBox;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -36,6 +34,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -47,16 +46,20 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static android.provider.SettingsSlicesContract.KEY_LOCATION;
-import static com.google.android.gms.maps.GoogleMap.MAP_TYPE_HYBRID;
-import static com.google.android.gms.maps.GoogleMap.MAP_TYPE_NONE;
-import static com.google.android.gms.maps.GoogleMap.MAP_TYPE_NORMAL;
-import static com.google.android.gms.maps.GoogleMap.MAP_TYPE_SATELLITE;
-import static com.google.android.gms.maps.GoogleMap.MAP_TYPE_TERRAIN;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, AdapterView.OnItemSelectedListener {
 
@@ -72,7 +75,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng mDefaultLocation = new LatLng(18.732, 73.234);
     private int DefaultZoom = 20;
     private Spinner mSpinner;
-
+    private FirebaseFirestore fb = FirebaseFirestore.getInstance();
+    private Map<LatLng, Integer> PotholesShown = new HashMap<>();
     private ArrayList<String> terraintypes = new ArrayList() {{
         add("None");
         add("Traffic");
@@ -151,6 +155,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return true;
     }
 
+    public void onPause() {
+        super.onPause();
+        PotholesShown.clear();
+    }
     private void updateMapType() {
         if (mMap == null) {
             return;
@@ -191,17 +199,65 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if (location != null) {
                         // Toast.makeText(MapsActivity.this, "jkdnlkdnglkdng", Toast.LENGTH_SHORT).show();
                         Log.d("Update to fb", "location update " + location);
+                        getNearByPothole(location, 0.10f);
                         pushLocationToFirebase(location);
                     }
                 }
             }, null);
         }
     }
+    private void getNearByPothole(Location centre, float dist){
+        double lat = 0.0144927536231884;
+        double lng = 0.0181818181818182;
+
+        double lowerLat = centre.getLatitude() - (lat * dist);
+        double lowerLon = centre.getLongitude() - (lng * dist);
+
+        double greaterLat = centre.getLatitude() + (lat * dist);
+        double greaterLon = centre.getLatitude() + (lng * dist);
+
+        GeoPoint lesserGeopoint = new GeoPoint(lowerLat, lowerLon);
+        GeoPoint greaterGeopoint = new GeoPoint(greaterLat, greaterLon);
+
+        CollectionReference doc = fb.collection("Pothole");
+        Query query = doc.whereGreaterThan("pothole" , lesserGeopoint)
+                .whereLessThanOrEqualTo("pothole", greaterGeopoint).orderBy("pothole").limit(1);
+
+      //  final ArrayList<MarkerOptions> markers = new ArrayList<>();
+        query.addSnapshotListener(new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@javax.annotation.Nullable QuerySnapshot queryDocumentSnapshots, @javax.annotation.Nullable FirebaseFirestoreException e) {
+                List<DocumentSnapshot> docs= queryDocumentSnapshots.getDocuments();
+
+                for(DocumentSnapshot d : docs){
+                    //Toast.makeText(MapsActivity.this, d.get("pothole").toString(), Toast.LENGTH_SHORT).show();
+
+                    GeoPoint loc1 =  d.getGeoPoint("pothole");
+                    LatLng loc = new LatLng(loc1.getLatitude() , loc1.getLongitude());
+                    if(!PotholesShown.containsKey(loc)) {
+                        MarkerOptions marker = new MarkerOptions().title("Pothole").position(loc)
+                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN));
+                        //Toast.makeText(MapsActivity.this, "cxvcxvcxvxcvxv", Toast.LENGTH_SHORT).show();
+                        // markers.add(marker);
+                        mMap.addMarker(marker);
+                        Snackbar.make(findViewById(R.id.CoordinateLayout), "Pothole within 50 meters" , Snackbar.LENGTH_LONG).show();
+                        PotholesShown.put(loc, 1);
+                    }
+
+                }
+
+                if(PotholesShown.size() > 50)
+                    PotholesShown.clear();
+               /* for(MarkerOptions marker : markers)
+                    mMap.addMarker(marker);*/
+            }
+        });
+
+    }
 
     void pushLocationToFirebase(Location lo){
 
         try{
-            FirebaseFirestore fb = FirebaseFirestore.getInstance();
             if(fb == null ){
                 // Toast.makeText(this, "Null returned from firestore", Toast.LENGTH_SHORT).show();
                 Log.d("NULL" , "NULL VALUES RETURNED");
@@ -221,7 +277,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     void getlocationpermission() {
-
         if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
                 android.Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
